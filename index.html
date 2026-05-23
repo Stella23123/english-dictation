@@ -12,6 +12,8 @@
         .bg-sage-dark { background-color: #354030; }
         .bg-sage-button { background-color: #4a5744; }
         .bg-sage-button:hover { background-color: #5c6c55; }
+        .wrong-flash { animation: flash 0.5s ease-in-out; }
+        @keyframes flash { 0%, 100% { background-color: white; } 50% { background-color: #fee2e2; } }
     </style>
 </head>
 <body class="bg-sage-alabaster min-h-screen flex flex-col items-center justify-center p-4 font-sans text-slate-800">
@@ -44,8 +46,7 @@
 
         <div id="dashboard-screen" class="bg-white p-6 rounded-2xl shadow-md border border-sage-border">
             <h3 class="text-xl font-serif font-bold text-sage-dark mb-4">Danh sách bài học Dictation có sẵn</h3>
-            <div id="lessons-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                </div>
+            <div id="lessons-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </div>
 
         <div id="admin-screen" class="hidden bg-white p-6 rounded-2xl shadow-md border border-sage-border">
@@ -180,6 +181,30 @@
 
     <script src="app.js"></script>
     <script>
+        // TRÌNH PHÁT ÂM THANH NGẦM TOÀN CỤC ĐƯỢC TÍCH HỢP CHUYÊN NGHIỆP TỪ LINK DRIVE
+        let currentAudio = null;
+
+        function playAudioEvent(speed) {
+            appState.registerAudioPlay();
+            const currentItem = appState.lesson.items[appState.currentIndex];
+            
+            // Nếu không có link Audio trong file Excel, hệ thống sẽ báo lỗi
+            if (!currentItem.audioUrl || currentItem.audioUrl === "") {
+                alert("⚠️ Bài học này chưa được giáo viên chèn link cấu hình Audio URL trong Google Sheets!");
+                return;
+            }
+
+            // Nếu đang phát âm thanh cũ thì dừng lại để phát câu mới
+            if (currentAudio) {
+                currentAudio.pause();
+            }
+
+            // Khởi tạo trình phát nhạc với đường link lấy trực tiếp từ Google Sheet của câu đó
+            currentAudio = new Audio(currentItem.audioUrl);
+            currentAudio.playbackRate = speed; // Tự động ép tốc độ phát theo nút bấm (0.75x, 0.9x, 1.0x)
+            currentAudio.play();
+        }
+
         // XỬ LÝ ĐĂNG NHẬP (LOGIN)
         function handleLogin() {
             const emailInput = document.getElementById('login-email').value.trim();
@@ -205,6 +230,7 @@
         }
 
         function handleLogout() {
+            if (currentAudio) currentAudio.pause(); // Dừng nhạc khi logout
             currentUser = null;
             document.getElementById('main-app').classList.add('hidden');
             document.getElementById('login-screen').classList.remove('hidden');
@@ -213,6 +239,7 @@
 
         // ĐIỀU HƯỚNG MÀN HÌNH
         function showDashboard() {
+            if (currentAudio) currentAudio.pause(); // Dừng nhạc khi chuyển màn hình
             document.getElementById('dashboard-screen').classList.remove('hidden');
             document.getElementById('player-screen').classList.add('hidden');
             document.getElementById('admin-screen').classList.add('hidden');
@@ -220,6 +247,7 @@
         }
 
         function showAdminPanel() {
+            if (currentAudio) currentAudio.pause();
             document.getElementById('admin-screen').classList.remove('hidden');
             document.getElementById('dashboard-screen').classList.add('hidden');
             document.getElementById('player-screen').classList.add('hidden');
@@ -257,10 +285,10 @@
                 return;
             }
 
-            // Tạo bài mới hoặc gộp câu thoại vào bài đã trùng tiêu đề
             let existingLesson = globalLessons.find(l => l.title.toLowerCase() === title.toLowerCase());
             const newItem = {
                 id: "item-" + Date.now(),
+                audioUrl: "", // Bài học nạp thủ công từ web tạm để trống audioUrl, nên cấu hình trong Sheet
                 sentence: sentence,
                 gapText: gap,
                 vietnameseMeaning: translation || "Chưa có nghĩa dịch",
@@ -280,7 +308,6 @@
 
             alert("🚀 AI Engine của bạn đã phân tích kịch bản thành công và nạp bài học lên hệ thống web!");
             
-            // Reset các ô nhập liệu
             document.getElementById('upload-sentence').value = "";
             document.getElementById('upload-gap').value = "";
             document.getElementById('upload-vietnamese').value = "";
@@ -297,7 +324,7 @@
             
             appState = new DictationStateMachine(lesson, (snapshot) => {
                 updateUI(snapshot);
-                updateLiveInspector(snapshot); // Cập nhật bảng mạch đen bên phải câu lệnh
+                updateLiveInspector(snapshot);
             });
             
             updateUI(appState.getStateSnapshot());
@@ -308,12 +335,6 @@
         function showTooltipAdvice() {
             const currentItem = appState.lesson.items[appState.currentIndex];
             alert(`💡 CHUYÊN GIA GIÁO DỤC GỢI Ý (GRAMMAR TOOLTIP):\n\n${currentItem.tooltip}`);
-        }
-
-        // PHÁT ÂM THANH GIẢ LẬP THEO TỐC ĐỘ (SPEED)
-        function playAudioEvent(speed) {
-            appState.registerAudioPlay();
-            alert(`🔊 Phát âm thanh Text-To-Speech (${speed}x speed):\n\n"${appState.lesson.items[appState.currentIndex].sentence}"`);
         }
 
         function checkAnswerEvent() {
@@ -329,7 +350,75 @@
             }
         }
 
-        // HÀM CẬP NHẬT BẢNG MẠCH ĐEN BÊN PHẢI (LIVE ENGINE STATE INSPECTOR) CHUẨN 100% NHƯ HÌNH 2
+        // HÀM ĐIỀU KHIỂN GIAO DIỆN CHÍNH (ĐÃ ĐƯỢC ĐỒNG BỘ THUẬT TOÁN ĐỌC BIẾN TỪ EXCEL)
+        function updateUI(snapshot) {
+            const stats = snapshot.statsBatch || {};
+            const currentItem = appState.lesson.items[snapshot.currentIndex];
+            
+            const wordCount = currentItem.gapText.split(" ").length;
+            document.getElementById('target-length-hint').innerText = `Target length: ${wordCount} word(s)`;
+
+            document.getElementById('player-lesson-info').innerText = `Lesson: ${snapshot.lessonTitle} (${snapshot.difficulty})`;
+            document.getElementById('progress-text').innerText = `Sentence ${snapshot.currentIndex + 1} of ${appState.lesson.items.length}`;
+
+            // Xử lý chuỗi khoảng trống [ ... 1 word ... ] chuẩn EdTech Studio
+            let displaySentence = currentItem.sentence;
+            if (!snapshot.isCurrentCorrect) {
+                let mask = `... ${wordCount} word${wordCount > 1 ? 's' : ''} ...`;
+                if (snapshot.feedbackTier >= 3) {
+                    mask = currentItem.gapText.split(" ").map(word => "_ ".repeat(word.length).trim()).join("   ");
+                }
+                displaySentence = currentItem.sentence.replace(currentItem.gapText, ` [ ${mask} ] `);
+            }
+            document.getElementById('sentence-display').innerHTML = displaySentence;
+
+            const hintBox = document.getElementById('hint-box');
+            const inputField = document.getElementById('user-input');
+            
+            if (snapshot.attemptsThisSentence === 0) {
+                hintBox.classList.add('hidden');
+                inputField.className = "w-full border-2 border-slate-200 rounded-xl pl-4 pr-10 py-3 text-base focus:outline-none focus:border-sage-dark bg-slate-50";
+                if(!snapshot.isCurrentCorrect) inputField.value = ""; 
+            }
+
+            if (snapshot.feedbackTier > 0 && !snapshot.isCurrentCorrect) {
+                hintBox.classList.remove('hidden');
+                hintBox.className = "mb-4 p-4 rounded-xl text-xs font-medium border bg-red-50 text-red-800 border-red-200 wrong-flash";
+                setTimeout(() => hintBox.classList.remove('wrong-flash'), 500);
+                inputField.className = "w-full border-2 border-red-400 rounded-xl pl-4 pr-10 py-3 text-base focus:outline-none transition bg-red-50/50 text-red-900 font-medium";
+
+                let hintMessage = `<strong>❌ Cố gắng lên! (Lần thử thứ ${snapshot.attemptsThisSentence})</strong><br class="mb-1">`;
+                if (snapshot.feedbackTier === 1) {
+                    hintMessage += `💡 Gợi ý: Bấm nút phát âm thanh phía trên để nghe lại cấu trúc cụm từ này.`;
+                } else if (snapshot.feedbackTier === 2) {
+                    hintMessage += `💡 Gợi ý ký tự đầu: Ký tự bắt đầu của đáp án là: "${currentItem.gapText.slice(0, 2).toUpperCase()}..."`;
+                } else if (snapshot.feedbackTier === 3) {
+                    hintMessage += `💡 Gợi ý cấu trúc: Nhìn vào ô trống phía trên, hệ thống đã mở rộng số lượng ký tự chính xác cho từng từ!`;
+                } else if (snapshot.feedbackTier >= 4) {
+                    hintMessage += `💡 Nghĩa tiếng Việt của từ cần điền: "${currentItem.vietnameseMeaning}"`;
+                }
+                hintBox.innerHTML = hintMessage;
+            }
+
+            if (snapshot.isCurrentCorrect) {
+                hintBox.classList.remove('hidden');
+                hintBox.className = "mb-4 p-4 rounded-xl text-xs font-medium border bg-emerald-50 text-emerald-800 border-emerald-200";
+                hintBox.innerHTML = `🎉 <strong>Chính xác!</strong> Đáp án đúng là: <span class="underline font-bold">${currentItem.gapText}</span>`;
+                
+                inputField.className = "w-full border-2 border-emerald-400 rounded-xl pl-4 pr-10 py-3 text-base focus:outline-none transition bg-emerald-50/50 text-emerald-900 font-bold";
+                inputField.value = currentItem.gapText;
+
+                const nextBtn = document.getElementById('next-btn');
+                nextBtn.disabled = false;
+                nextBtn.className = "bg-[#354030] hover:bg-[#43523d] text-white font-bold px-5 py-2 rounded-xl text-xs cursor-pointer transition uppercase tracking-wider shadow";
+            } else {
+                const nextBtn = document.getElementById('next-btn');
+                nextBtn.disabled = true;
+                nextBtn.className = "bg-slate-200 text-slate-400 font-bold px-5 py-2 rounded-xl text-xs cursor-not-allowed transition uppercase tracking-wider";
+            }
+        }
+
+        // HÀM CẬP NHẬT BẢNG MẠCH ĐEN BÊN PHẢI (LIVE ENGINE STATE INSPECTOR)
         function updateLiveInspector(snapshot) {
             document.getElementById('inspect-attempts').innerText = snapshot.attemptsThisSentence;
             document.getElementById('inspect-userinput').innerText = snapshot.currentInputValue || "";
@@ -338,14 +427,12 @@
             document.getElementById('inspect-tier').innerText = snapshot.feedbackTier;
             document.getElementById('inspect-replays').innerText = snapshot.audioReplaysCount;
 
-            // Đưa nhật ký lỗi sai tích lũy vào pre-tag
             if (snapshot.statsBatch.mistakeLogs.length > 0) {
                 document.getElementById('inspect-mistakes').innerText = JSON.stringify(snapshot.statsBatch.mistakeLogs, null, 2);
             } else {
                 document.getElementById('inspect-mistakes').innerText = "No mistakes logged in current batch yet.";
             }
 
-            // Đưa cấu trúc gói JSON payload nén tổng hợp thô ra màn hình
             const payloadSample = {
                 studentEmail: currentUser ? currentUser.email : "unknown",
                 lessonTitle: snapshot.lessonTitle,
@@ -364,10 +451,10 @@
                     difficulty: stateSnapshot.difficulty,
                     correctFirstTry: stateSnapshot.statsBatch.correctFirstTry,
                     totalSentences: stateSnapshot.statsBatch.totalSentences,
-                    totalAttemptsSpeed: stateSnapshot.statsBatch.totalAttemptsCount, // Map khớp với biến GAS nhận dữ liệu
+                    totalAttemptsSpeed: stateSnapshot.statsBatch.totalAttemptsCount,
                     accuracyScore: stateSnapshot.statsBatch.accuracyScore,
                     longestStreak: stateSnapshot.statsBatch.longestStreak,
-                    replaysCount: stateSnapshot.audioReplaysCount, // Map khớp với cột GAS nhận dữ liệu
+                    replaysCount: stateSnapshot.audioReplaysCount,
                     mistakesSummary: JSON.stringify(stateSnapshot.statsBatch.mistakeLogs)
                 };
 
