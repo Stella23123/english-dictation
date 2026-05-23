@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Dictation Workspace</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        .bg-sage-alabaster { background-color: #f4f6f3; }
+        .border-sage-border { border-color: #cbd5c8; }
+        .text-sage-dark { color: #354030; }
+        .bg-sage-dark { background-color: #354030; }
+        .bg-sage-button { background-color: #4a5744; }
+        .bg-sage-button:hover { background-color: #5c6c55; }
+    </style>
+</head>
+<body class="bg-sage-alabaster min-h-screen flex flex-col items-center justify-center p-4 font-sans text-slate-800">
+
+    <div id="login-screen" class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-sage-border">
+        <h2 class="text-2xl font-serif font-bold text-sage-dark mb-2 text-center">English Dictation Login</h2>
+        <p class="text-xs text-slate-400 text-center mb-6">Vui lòng nhập Email được giáo viên cung cấp</p>
+        <div class="mb-4">
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Student / Admin Email</label>
+            <input type="email" id="login-email" class="w-full border-2 border-slate-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-sage-dark" placeholder="e.g., student01@sample.edu.vn">
+        </div>
+        <button onclick="handleLogin()" class="w-full bg-sage-dark text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition shadow-md">
+            Đăng Nhập Hệ Thống
+        </button>
+        <p class="text-[11px] text-slate-400 mt-4 text-center">Tài khoản mẫu: admin@dictation.edu.vn hoặc student01@sample.edu.vn</p>
+    </div>
+
+    <div id="main-app" class="hidden w-full max-w-6xl flex flex-col gap-4">
+        
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-sage-border flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <span class="font-serif font-bold text-lg text-sage-dark">ENGLISH DICTATION <span class="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded font-sans ml-1">MENTOR</span></span>
+            </div>
+            <div class="flex items-center gap-4 text-sm font-medium">
+                <span id="user-display" class="text-slate-600">👤 User: -</span>
+                <button id="admin-nav-btn" onclick="showAdminPanel()" class="hidden bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-blue-700">Tải Bài Lên (Teacher CMS)</button>
+                <button onclick="handleLogout()" class="text-red-600 hover:underline">Đăng xuất</button>
+            </div>
+        </div>
+
+        <div id="dashboard-screen" class="bg-white p-6 rounded-2xl shadow-md border border-sage-border">
+            <h3 class="text-xl font-serif font-bold text-sage-dark mb-4">Danh sách bài học Dictation có sẵn</h3>
+            <div id="lessons-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+        </div>
+
+        <div id="admin-screen" class="hidden bg-white p-6 rounded-2xl shadow-md border border-sage-border">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-serif font-bold text-blue-800">Teacher CMS Workspace (Upload Center)</h3>
+                <button onclick="showDashboard()" class="bg-slate-500 text-white text-xs px-3 py-1 rounded hover:bg-slate-600">Quay lại Dashboard</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Tiêu đề bài học</label>
+                        <input type="text" id="upload-title" class="w-full border p-2 rounded" placeholder="e.g., IELTS Listening Practice 01">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Độ khó</label>
+                        <select id="upload-difficulty" class="w-full border p-2 rounded">
+                            <option value="Easy">Easy (Ẩn 1 từ)</option>
+                            <option value="Medium">Medium (Ẩn 2 từ)</option>
+                            <option value="Advanced">Advanced (Ẩn 3 từ)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Câu tiếng Anh hoàn chỉnh (Sentence)</label>
+                        <input type="text" id="upload-sentence" class="w-full border p-2 rounded" placeholder="It is crucial to reply to emails promptly.">
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Từ/Cụm từ ẩn (Gap Phrase)</label>
+                        <input type="text" id="upload-gap" class="w-full border p-2 rounded" placeholder="reply">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nghĩa tiếng Việt (Dùng làm gợi ý cấp 4)</label>
+                        <input type="text" id="upload-vietnamese" class="w-full border p-2 rounded" placeholder="trả lời">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Giải thích Ngữ Pháp / Từ Vựng (Tooltip)</label>
+                        <input type="text" id="upload-tooltip" class="w-full border p-2 rounded" placeholder="To 'reply' means to write back.">
+                    </div>
+                </div>
+            </div>
+            <button onclick="handleTeacherUpload()" class="mt-6 w-full bg-blue-700 text-white font-bold py-2.5 rounded-xl hover:bg-blue-800 transition shadow">
+                🚀 XỬ LÝ AI & ĐƯA BÀI LÊN HỆ THỐNG APP
+            </button>
+        </div>
+
+        <div id="player-screen" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+            
+            <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-md border border-sage-border flex flex-col">
+                <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+                    <span id="player-lesson-info" class="text-xs font-bold text-slate-400 uppercase tracking-wider">Lesson: -</span>
+                    <button onclick="showDashboard()" class="text-xs text-sage-dark hover:underline font-bold">⬅ Thoát bài học</button>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center mb-4 shadow-sm">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">LISTENING DECK</p>
+                    <div class="flex justify-center gap-3 mb-3">
+                        <button onclick="playAudioEvent(1.0)" class="bg-sage-button text-white text-xs font-bold px-4 py-2.5 rounded-lg transition shadow-md">
+                            ▶ PLAY SENTENCE PRONUNCIATION
+                        </button>
+                    </div>
+                    <div class="inline-flex bg-slate-200 p-1 rounded-lg text-xs">
+                        <span class="px-2 py-1 text-slate-400">PLAYBACK SPEED:</span>
+                        <button onclick="playAudioEvent(0.75)" class="px-2 py-1 rounded bg-white font-bold text-slate-700 mx-0.5 shadow-sm">0.75x</button>
+                        <button onclick="playAudioEvent(0.9)" class="px-2 py-1 rounded bg-white font-bold text-slate-700 mx-0.5 shadow-sm">0.9x</button>
+                        <button onclick="playAudioEvent(1.0)" class="px-2 py-1 rounded bg-white font-bold text-slate-700 mx-0.5 shadow-sm">1.0x</button>
+                    </div>
+                </div>
+
+                <div class="mb-4 p-5 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 min-h-[100px] flex items-center justify-center text-center">
+                    <p id="sentence-display" class="text-lg text-slate-700 font-serif font-medium leading-relaxed"></p>
+                </div>
+
+                <div class="mb-4">
+                    <div class="flex justify-between mb-1">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase">TYPE THE TARGET GAP WORD(S):</label>
+                        <span id="target-length-hint" class="text-[11px] font-mono text-slate-400">Target length: -</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <input type="text" id="user-input" autocomplete="off" class="w-full border-2 border-slate-200 rounded-xl pl-4 pr-10 py-3 text-base focus:outline-none focus:border-sage-dark bg-slate-50" placeholder="Fill in this blank...">
+                            <button onclick="showTooltipAdvice()" class="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600" title="Xem giải thích ngữ pháp">❓</button>
+                        </div>
+                        <button onclick="checkAnswerEvent()" class="bg-[#354030] hover:bg-[#43523d] text-white font-bold px-6 py-3 rounded-xl transition shadow">
+                            Verify Response ➔
+                        </button>
+                    </div>
+                </div>
+
+                <div id="hint-box" class="hidden mb-4 p-4 rounded-xl text-xs font-medium border"></div>
+
+                <div class="flex justify-between items-center pt-3 border-t border-slate-100">
+                    <span id="progress-text" class="text-xs text-slate-400 font-mono">Sentence 0 of 0</span>
+                    <button id="next-btn" onclick="nextQuestionEvent()" disabled class="bg-slate-200 text-slate-400 font-bold px-5 py-2 rounded-xl text-xs cursor-not-allowed uppercase tracking-wider">
+                        Next Exercise ➜
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-[#1a2017] p-5 rounded-2xl shadow-xl text-slate-300 font-mono text-xs border border-slate-800">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
+                    <span class="text-amber-400 font-bold text-[11px]">📟 LIVE ENGINE STATE INDICATOR</span>
+                    <span class="bg-slate-800 text-[9px] text-slate-400 px-2 py-0.5 rounded uppercase font-sans">State Inspector</span>
+                </div>
+                <p class="text-[10px] text-slate-500 mb-4 font-sans leading-relaxed">Bảng hiển thị thời gian thực các biến số trong Frontend Dictation State Machine mà Google AI Studio quản lý.</p>
+                
+                <div class="space-y-4">
+                    <div class="bg-[#232b20] p-3 rounded border border-slate-800">
+                        <p class="text-emerald-400 font-bold mb-2 border-b border-slate-800 pb-1 text-[11px]">ACTIVE ATTEMPT STATE VARIABLES</p>
+                        <p>attempt_count: <span id="inspect-attempts" class="text-white font-bold">0</span></p>
+                        <p>user_input: "<span id="inspect-userinput" class="text-amber-300"></span>"</p>
+                        <p>is_correct: <span id="inspect-iscorrect" class="text-red-400">false</span></p>
+                        <p>feedback_tier_level: <span id="inspect-tier" class="text-amber-400">0</span></p>
+                        <p>audio_replays_made: <span id="inspect-replays" class="text-white">1</span></p>
+                    </div>
+
+                    <div class="bg-[#232b20] p-3 rounded border border-slate-800">
+                        <p class="text-emerald-400 font-bold mb-1 text-[11px]">ACCUMULATING STUDENT MISTAKE LOG BATCH</p>
+                        <pre id="inspect-mistakes" class="text-[10px] text-slate-400 overflow-x-auto whitespace-pre-wrap leading-tight mt-1">No mistakes logged in current batch yet.</pre>
+                    </div>
+
+                    <div class="bg-[#232b20] p-3 rounded border border-slate-800">
+                        <p class="text-emerald-400 font-bold mb-1 text-[11px]">JSON STAT PAYLOAD COMPILED</p>
+                        <pre id="inspect-json" class="text-[10px] text-amber-200/80 overflow-x-auto whitespace-pre-wrap leading-tight mt-1">{}</pre>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // XỬ LÝ ĐĂNG NHẬP (LOGIN)
+        function handleLogin() {
+            const emailInput = document.getElementById('login-email').value.trim();
+            const user = userDatabase.find(u => u.email.toLowerCase() === emailInput.toLowerCase());
+            
+            if (!user) {
+                alert("❌ Email không tồn tại trên hệ thống hoặc chưa được Giáo viên đăng ký!");
+                return;
+            }
+            
+            currentUser = user;
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('user-display').innerText = `👤 ${user.role}: ${user.name}`;
+            
+            if (user.role === "Teacher") {
+                document.getElementById('admin-nav-btn').classList.remove('hidden');
+            } else {
+                document.getElementById('admin-nav-btn').classList.add('hidden');
+            }
+            
+            showDashboard();
+        }
+
+        function handleLogout() {
+            currentUser = null;
+            document.getElementById('main-app').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('login-email').value = "";
+        }
+
+        // ĐIỀU HƯỚNG MÀN HÌNH
+        function showDashboard() {
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+            document.getElementById('player-screen').classList.add('hidden');
+            document.getElementById('admin-screen').classList.add('hidden');
+            renderDashboardLessons();
+        }
+
+        function showAdminPanel() {
+            document.getElementById('admin-screen').classList.remove('hidden');
+            document.getElementById('dashboard-screen').classList.add('hidden');
+            document.getElementById('player-screen').classList.add('hidden');
+        }
+
+        // TẢI DANH SÁCH BÀI HỌC RA DASHBOARD
+        function renderDashboardLessons() {
+            const container = document.getElementById('lessons-list');
+            container.innerHTML = "";
+            globalLessons.forEach(lesson => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between items-center hover:shadow-md transition";
+                card.innerHTML = `
+                    <div>
+                        <h4 class="font-serif font-bold text-sage-dark">${lesson.title}</h4>
+                        <p class="text-xs text-slate-500 mt-1">Độ khó: <span class="text-indigo-600 font-bold">${lesson.difficulty}</span> | Quy mô: ${lesson.items.length} câu thoại</p>
+                    </div>
+                    <button onclick="startLesson('${lesson.id}')" class="bg-sage-button text-white text-xs font-bold px-4 py-2 rounded-lg shadow">Vào Học ➔</button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // TÍNH NĂNG UPLOAD BÀI HỌC MỚI DÀNH CHO GIÁO VIÊN
+        function handleTeacherUpload() {
+            const title = document.getElementById('upload-title').value.trim();
+            const difficulty = document.getElementById('upload-difficulty').value;
+            const sentence = document.getElementById('upload-sentence').value.trim();
+            const gap = document.getElementById('upload-gap').value.trim();
+            const translation = document.getElementById('upload-vietnamese').value.trim();
+            const tooltip = document.getElementById('upload-tooltip').value.trim();
+
+            if (!title || !sentence || !gap) {
+                alert("❌ Vui lòng điền đầy đủ các thông tin bắt buộc: Tiêu đề, Câu thoại và Từ bị ẩn!");
+                return;
+            }
+
+            // Tạo bài mới hoặc gộp câu thoại vào bài đã trùng tiêu đề
+            let existingLesson = globalLessons.find(l => l.title.toLowerCase() === title.toLowerCase());
+            const newItem = {
+                id: "item-" + Date.now(),
+                sentence: sentence,
+                gapText: gap,
+                vietnameseMeaning: translation || "Chưa có nghĩa dịch",
+                tooltip: tooltip || "Không có ghi chú thêm."
+            };
+
+            if (existingLesson) {
+                existingLesson.items.push(newItem);
+            } else {
+                globalLessons.push({
+                    id: "lesson-" + Date.now(),
+                    title: title,
+                    difficulty: difficulty,
+                    items: [newItem]
+                });
+            }
+
+            alert("🚀 AI Engine của bạn đã phân tích kịch bản thành công và nạp bài học lên hệ thống web!");
+            
+            // Reset các ô nhập liệu
+            document.getElementById('upload-sentence').value = "";
+            document.getElementById('upload-gap').value = "";
+            document.getElementById('upload-vietnamese').value = "";
+            document.getElementById('upload-tooltip').value = "";
+            
+            showDashboard();
+        }
+
+        // BẮT ĐẦU VÀO PHÒNG HỌC DICTATION CHÉP CHÍNH TẢ
+        function startLesson(lessonId) {
+            const lesson = globalLessons.find(l => l.id === lessonId);
+            document.getElementById('dashboard-screen').classList.add('hidden');
+            document.getElementById('player-screen').classList.remove('hidden');
+            
+            appState = new DictationStateMachine(lesson, (snapshot) => {
+                updateUI(snapshot);
+                updateLiveInspector(snapshot); // Cập nhật bảng mạch đen bên phải câu lệnh
+            });
+            
+            updateUI(appState.getStateSnapshot());
+            updateLiveInspector(appState.getStateSnapshot());
+        }
+
+        // HÀM HIỂN THỊ TOOLTIP GIẢI THÍCH NGỮ PHÁP (KHI NHẤP VÀO DẤU ?)
+        function showTooltipAdvice() {
+            const currentItem = appState.lesson.items[appState.currentIndex];
+            alert(`💡 CHUYÊN GIA GIÁO DỤC GỢI Ý (GRAMMAR TOOLTIP):\n\n${currentItem.tooltip}`);
+        }
+
+        // PHÁT ÂM THANH GIẢ LẬP THEO TỐC ĐỘ (SPEED)
+        function playAudioEvent(speed) {
+            appState.registerAudioPlay();
+            alert(`🔊 Phát âm thanh Text-To-Speech (${speed}x speed):\n\n"${appState.lesson.items[appState.currentIndex].sentence}"`);
+        }
+
+        function checkAnswerEvent() {
+            const inputVal = document.getElementById('user-input').value;
+            appState.submitAttempt(inputVal);
+        }
+
+        function nextQuestionEvent() {
+            const hasNext = appState.nextExercise();
+            if (!hasNext) {
+                alert("🏁 Hoàn thành bài học! Dữ liệu dạng gói đơn (Batch Packet) chuẩn bị được đẩy tự động sang Google Sheet database...");
+                sendProgressToGoogleSheets(appState.getStateSnapshot());
+            }
+        }
+
+        // HÀM CẬP NHẬT BẢNG MẠCH ĐEN BÊN PHẢI (LIVE ENGINE STATE INSPECTOR) CHUẨN 100% NHƯ HÌNH 2
+        function updateLiveInspector(snapshot) {
+            document.getElementById('inspect-attempts').innerText = snapshot.attemptsThisSentence;
+            document.getElementById('inspect-userinput').innerText = snapshot.currentInputValue || "";
+            document.getElementById('inspect-iscorrect').innerText = snapshot.isCurrentCorrect;
+            document.getElementById('inspect-iscorrect').className = snapshot.isCurrentCorrect ? "text-emerald-400" : "text-red-400";
+            document.getElementById('inspect-tier').innerText = snapshot.feedbackTier;
+            document.getElementById('inspect-replays').innerText = snapshot.audioReplaysCount;
+
+            // Đưa nhật ký lỗi sai tích lũy vào pre-tag
+            if (snapshot.statsBatch.mistakeLogs.length > 0) {
+                document.getElementById('inspect-mistakes').innerText = JSON.stringify(snapshot.statsBatch.mistakeLogs, null, 2);
+            } else {
+                document.getElementById('inspect-mistakes').innerText = "No mistakes logged in current batch yet.";
+            }
+
+            // Đưa cấu trúc gói JSON payload nén tổng hợp thô ra màn hình
+            const payloadSample = {
+                studentEmail: currentUser ? currentUser.email : "unknown",
+                lessonTitle: snapshot.lessonTitle,
+                difficulty: snapshot.difficulty,
+                statsBatch: snapshot.statsBatch
+            };
+            document.getElementById('inspect-json').innerText = JSON.stringify(payloadSample, null, 2);
+        }
+
+        // HÀM GỬI DATA VỀ GOOGLE SHEET KHI HỌC VIÊN HOÀN THÀNH BÀI
+        async function sendProgressToGoogleSheets(stateSnapshot) {
+            try {
+                const payload = {
+                    studentEmail: currentUser.email,
+                    lessonTitle: stateSnapshot.lessonTitle,
+                    difficulty: stateSnapshot.difficulty,
+                    correctFirstTry: stateSnapshot.statsBatch.correctFirstTry,
+                    totalSentences: stateSnapshot.statsBatch.totalSentences,
+                    totalAttemptsSpeed: stateSnapshot.statsBatch.totalAttemptsCount, // Map khớp với biến GAS nhận dữ liệu
+                    accuracyScore: stateSnapshot.statsBatch.accuracyScore,
+                    longestStreak: stateSnapshot.statsBatch.longestStreak,
+                    replaysCount: stateSnapshot.audioReplaysCount, // Map khớp với cột GAS nhận dữ liệu
+                    mistakesSummary: JSON.stringify(stateSnapshot.statsBatch.mistakeLogs)
+                };
+
+                await fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                alert("🎉 Tuyệt vời! Điểm số và bảng báo cáo lỗi sai của tài khoản [" + currentUser.email + "] đã được đồng bộ và cập nhật thành công vào Google Sheet database!");
+                showDashboard();
+            } catch (error) {
+                console.error("Lỗi đồng bộ dữ liệu hệ thống:", error);
+            }
+        }
+    </script>
+</body>
+</html>
